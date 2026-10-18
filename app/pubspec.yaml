@@ -1,0 +1,29 @@
+name: cycle_app
+description: "Мой цикл — календарь с синхронизацией через свой сервер"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  http: ^1.2.0
+  shared_preferences: ^2.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  image_path: "icon.png"
+  adaptive_icon_background: "#E53950"
+  adaptive_icon_foreground: "icon_fg.png"
