@@ -36,6 +36,8 @@ jobs:
           sed -i 's/android:label="cycle_app"/android:label="Мой цикл"/' $MAN
           grep -q 'permission.INTERNET' $MAN || \
             sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' $MAN
+          # Отключаем Impeller: на части Xiaomi/HyperOS он даёт чёрный экран
+          sed -i 's|</application>|    <meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false" />\n    </application>|' $MAN
           cat $MAN
 
       - run: flutter pub get
