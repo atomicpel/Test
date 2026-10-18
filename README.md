@@ -10,16 +10,20 @@
 
 ## Установка сервера на VPS (Ubuntu)
 
-1. Добавьте DNS-запись для поддомена (например `cycle.atomicpel.cloud-ip.cc`)
-   на IP сервера.
-2. На сервере:
+1. Убедитесь, что поддомен (например `cycle.atomicpel.cloud-ip.cc`) указывает
+   на IP сервера: `ping cycle.atomicpel.cloud-ip.cc`.
+2. Скопируйте на сервер один файл `server/install-cycle-server.sh` и запустите:
    ```bash
-   git clone https://github.com/atomicpel/test.git cycle && cd cycle/server
-   sudo bash install.sh cycle.atomicpel.cloud-ip.cc
+   sudo bash install-cycle-server.sh cycle.atomicpel.cloud-ip.cc
    ```
-3. Скрипт выведет адрес и токен — введите их в приложении на обоих телефонах
-   (Настройки → Синхронизация).
+3. В конце скрипт покажет **код подключения** вида `https://адрес#токен`.
+   Скопируйте его, в приложении: Настройки → «Вставить код подключения».
+   На втором телефоне то же самое (или кнопка «Код для второго телефона»).
+
+Показать код ещё раз: `sudo bash install-cycle-server.sh --code cycle.atomicpel.cloud-ip.cc`.
+Повторный запуск установщика обновляет сервер, токен и данные сохраняются.
 
 Токен хранится в `/etc/cycle-sync.env`, база — в `/var/lib/cycle-sync/cycle.db`
 (её стоит включить в резервное копирование).
 Сервер слушает только `127.0.0.1:8095`, наружу его отдаёт nginx по HTTPS.
+`server/app.py` — исходник сервера, он же встроен в установщик.

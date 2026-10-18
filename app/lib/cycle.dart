@@ -44,22 +44,89 @@ List<Period> groupPeriods(Iterable<DateTime> days, {int maxGap = 1}) {
   return result;
 }
 
-int _avg(List<int> xs) =>
-    (xs.reduce((a, b) => a + b) / xs.length).round();
+/// Стандартные значения — только пока записей не хватает для расчёта.
+const kStdCycle = 28;
+const kStdPeriod = 5;
+
+/// Сколько последних циклов учитывать и насколько быстро «стареют» старые.
+const kHistoryWindow = 12;
+const kDecay = 0.8;
+
+int _median(List<int> xs) {
+  final s = [...xs]..sort();
+  final m = s.length ~/ 2;
+  return s.length.isOdd ? s[m] : ((s[m - 1] + s[m]) / 2).round();
+}
+
+/// Взвешенное среднее и разброс: самое свежее значение весит 1,
+/// предыдущее 0.8, ещё раньше 0.64 и т.д.
+({int mean, int spread}) _weighted(List<int> xs) {
+  var sw = 0.0, sx = 0.0;
+  for (var i = 0; i < xs.length; i++) {
+    final w = _pow(kDecay, xs.length - 1 - i);
+    sw += w;
+    sx += w * xs[i];
+  }
+  final mean = sx / sw;
+  var sv = 0.0;
+  for (var i = 0; i < xs.length; i++) {
+    final w = _pow(kDecay, xs.length - 1 - i);
+    sv += w * (xs[i] - mean) * (xs[i] - mean);
+  }
+  final sd = xs.length < 3 ? 0.0 : _sqrt(sv / sw);
+  return (mean: mean.round(), spread: sd.round());
+}
+
+double _pow(double b, int e) {
+  var r = 1.0;
+  for (var i = 0; i < e; i++) {
+    r *= b;
+  }
+  return r;
+}
+
+double _sqrt(double x) {
+  if (x <= 0) return 0;
+  var r = x;
+  for (var i = 0; i < 30; i++) {
+    r = (r + x / r) / 2;
+  }
+  return r;
+}
+
+/// Циклы, пригодные для расчёта: последние [kHistoryWindow], без выбросов.
+/// Выброс — цикл, сильно отличающийся от медианы (например, когда
+/// пропущена отметка и два цикла слились в один).
+List<int> usableCycles(List<int> all) {
+  final plausible = all.where((c) => c >= 15 && c <= 90).toList();
+  final recent = plausible.length > kHistoryWindow
+      ? plausible.sublist(plausible.length - kHistoryWindow)
+      : plausible;
+  if (recent.length < 3) return recent;
+  final m = _median(recent);
+  final tol = (m * 0.25).round() < 7 ? 7 : (m * 0.25).round();
+  final ok = recent.where((c) => (c - m).abs() <= tol).toList();
+  return ok.isEmpty ? recent : ok;
+}
 
 class Forecast {
   final List<Period> periods; // прошлые, по возрастанию
   final int cycleLength;
   final int periodLength;
-  final bool cycleFromHistory;
+  final int cyclesUsed; // по скольким циклам посчитано (0 — предварительно)
+  final int cycleSpread; // ± дней (0 — неизвестно)
   final List<Period> predicted;
   final int delay; // дней задержки (0 — нет)
   final Map<DateTime, DayKind> _marks;
   final Set<DateTime> _periodDays;
 
   Forecast._(this.periods, this.cycleLength, this.periodLength,
-      this.cycleFromHistory, this.predicted, this.delay, this._marks,
-      this._periodDays);
+      this.cyclesUsed, this.cycleSpread, this.predicted, this.delay,
+      this._marks, this._periodDays);
+
+  /// Прогноз предварительный: записей пока меньше двух периодов.
+  bool get tentative => cyclesUsed == 0;
+  bool get cycleFromHistory => !tentative;
 
   /// Длины прошлых циклов (между началами соседних периодов).
   List<int> get cycleLengths => [
@@ -89,8 +156,6 @@ class Forecast {
 
 Forecast computeForecast(
   Set<DateTime> periodDays, {
-  int defaultCycle = 28,
-  int defaultPeriod = 5,
   DateTime? now,
   int count = 12,
 }) {
@@ -98,19 +163,24 @@ Forecast computeForecast(
   final days = periodDays.map(dateOnly).toSet();
   final periods = groupPeriods(days);
 
-  final cycles = <int>[
+  // Длина цикла — только из записей
+  final all = <int>[
     for (var i = 1; i < periods.length; i++)
       daysBetween(periods[i - 1].start, periods[i].start)
-  ].where((c) => c >= 18 && c <= 60).toList();
-  final recentCycles =
-      cycles.length > 6 ? cycles.sublist(cycles.length - 6) : cycles;
-  final cycle = recentCycles.isEmpty ? defaultCycle : _avg(recentCycles);
+  ];
+  final cycles = usableCycles(all);
+  final cw = cycles.isEmpty ? null : _weighted(cycles);
+  final cycle = cw?.mean ?? kStdCycle;
+  final spread = cw?.spread ?? 0;
 
-  // Длина периода: по завершённым периодам (последний может ещё идти)
-  final finished = periods.where((p) => p.end.isBefore(addDays(t, -1))).toList();
-  final lens = finished.map((p) => p.length).where((l) => l >= 1 && l <= 12).toList();
-  final recentLens = lens.length > 6 ? lens.sublist(lens.length - 6) : lens;
-  final rawLen = recentLens.isEmpty ? defaultPeriod : _avg(recentLens);
+  // Длина месячных — по завершённым периодам (последний может ещё идти)
+  final finished =
+      periods.where((p) => p.end.isBefore(addDays(t, -1))).toList();
+  var lens = finished.map((p) => p.length).where((l) => l <= 12).toList();
+  if (lens.length > kHistoryWindow) {
+    lens = lens.sublist(lens.length - kHistoryWindow);
+  }
+  final rawLen = lens.isEmpty ? kStdPeriod : _weighted(lens).mean;
   final int periodLen = rawLen < 1 ? 1 : (rawLen > 12 ? 12 : rawLen);
 
   final marks = <DateTime, DayKind>{};
@@ -135,17 +205,18 @@ Forecast computeForecast(
         marks[d] = DayKind.predicted;
       }
     }
+    // Овуляция — за 14 дней до следующих месячных, фертильно 5 дней до и 1 после
     for (final s in cycleStarts) {
       final ov = addDays(s, cycle - 14);
       for (var k = -5; k <= 1; k++) {
         final d = addDays(ov, k);
-        if (marks[d] != DayKind.predicted) {
+        if (marks[d] != DayKind.predicted && !days.contains(d)) {
           marks[d] = k == 0 ? DayKind.ovulation : DayKind.fertile;
         }
       }
     }
   }
 
-  return Forecast._(periods, cycle, periodLen, recentCycles.isNotEmpty,
+  return Forecast._(periods, cycle, periodLen, cycles.length, spread,
       predicted, delay, marks, days);
 }

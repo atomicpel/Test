@@ -95,6 +95,7 @@ class _CalendarPageState extends State<CalendarPage> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      useSafeArea: true,
       builder: (_) => DaySheet(store: widget.store, day: d),
     );
   }
@@ -143,6 +144,7 @@ class _StatusCard extends StatelessWidget {
     String big;
     String small = '';
     final last = f.last;
+    final pm = f.cycleSpread > 0 ? ' (±${daysWord(f.cycleSpread)})' : '';
 
     if (last == null) {
       big = 'Отметьте первый день месячных';
@@ -150,7 +152,7 @@ class _StatusCard extends StatelessWidget {
           'во вкладке «История».';
     } else if (last.contains(t)) {
       big = 'Месячные: ${daysBetween(last.start, t) + 1}-й день';
-      small = 'Следующие ≈ ${fmtDate(f.nextStart!)}';
+      small = 'Следующие ≈ ${fmtDate(f.nextStart!)}$pm';
     } else if (f.delay > 0) {
       big = 'Задержка ${daysWord(f.delay)}';
       small = 'Ожидались ${fmtDate(addDays(last.start, f.cycleLength))}';
@@ -160,7 +162,7 @@ class _StatusCard extends StatelessWidget {
           ? 'Месячные ожидаются сегодня'
           : 'До месячных ${daysWord(left)}';
       small = 'День цикла ${daysBetween(last.start, t) + 1} · '
-          'ожидаются ${fmtDate(f.nextStart!)}';
+          'ожидаются ${fmtDate(f.nextStart!)}$pm';
     }
 
     final kind = f.kindOf(t);
@@ -198,8 +200,13 @@ class _StatusCard extends StatelessWidget {
             if (last != null) ...[
               const SizedBox(height: 10),
               Text(
-                'Цикл ${daysWord(f.cycleLength)} · месячные ${daysWord(f.periodLength)}'
-                '${f.cycleFromHistory ? '' : ' (по умолчанию)'}',
+                f.tentative
+                    ? 'Прогноз предварительный — уточнится, когда отметите '
+                        'начало следующих месячных или добавите прошлые '
+                        'периоды в «Истории»'
+                    : 'Цикл ${daysWord(f.cycleLength)} · месячные '
+                        '${daysWord(f.periodLength)} · по '
+                        '${f.cyclesUsed} ${plural(f.cyclesUsed, 'циклу', 'циклам', 'циклам')}',
                 style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onPrimaryContainer),
               ),
@@ -430,9 +437,12 @@ class _DaySheetState extends State<DaySheet> {
       listenable: store,
       builder: (context, _) {
         final on = store.isPeriod(d);
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-              20, 0, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+        final mq = MediaQuery.of(context);
+        final bottom = mq.viewInsets.bottom > mq.viewPadding.bottom
+            ? mq.viewInsets.bottom
+            : mq.viewPadding.bottom;
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + bottom),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

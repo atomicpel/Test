@@ -27,9 +27,11 @@ class HistoryPage extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(children: [
-                Expanded(child: _stat(context, 'Средний цикл', daysWord(f.cycleLength))),
+                Expanded(child: _stat(context, 'Средний цикл',
+                    f.tentative ? '—' : daysWord(f.cycleLength))),
+                Expanded(child: _stat(context, 'Разброс',
+                    f.cycleSpread > 0 ? '±${daysWord(f.cycleSpread)}' : '—')),
                 Expanded(child: _stat(context, 'Месячные', daysWord(f.periodLength))),
-                Expanded(child: _stat(context, 'Записано', '${f.periods.length}')),
               ]),
             ),
           ),

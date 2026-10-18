@@ -62,6 +62,31 @@ class Store extends ChangeNotifier {
     );
   }
 
+  /// Одна строка «адрес#токен» — удобно передать на второй телефон.
+  String get connectionCode => syncConfigured ? '$serverUrl#$token' : '';
+
+  /// Разбирает код подключения. Понимает «адрес#токен» и две строки
+  /// «адрес» и «токен». Возвращает null, если это не код.
+  static ({String url, String token})? parseCode(String raw) {
+    final text = raw.trim();
+    String url, tok;
+    if (text.contains('#')) {
+      final i = text.indexOf('#');
+      url = text.substring(0, i);
+      tok = text.substring(i + 1);
+    } else {
+      final lines = text.split(RegExp(r'\s+')).where((l) => l.isNotEmpty).toList();
+      if (lines.length != 2) return null;
+      url = lines[0];
+      tok = lines[1];
+    }
+    url = url.trim();
+    tok = tok.trim();
+    if (tok.length < 16 || !RegExp(r'^[A-Za-z0-9_\-]+$').hasMatch(tok)) return null;
+    if (!url.contains('.') || url.contains(' ')) return null;
+    return (url: url, token: tok);
+  }
+
   bool get syncConfigured => serverUrl.isNotEmpty && token.isNotEmpty;
   int get pendingCount => _recs.values.where((r) => r.dirty).length;
 
@@ -101,17 +126,7 @@ class Store extends ChangeNotifier {
     return res;
   }
 
-  Map<String, dynamic> get _settings {
-    final r = _recs['settings'];
-    if (r == null || r.deleted || r.value is! Map) return {};
-    return Map<String, dynamic>.from(r.value as Map);
-  }
-
-  int get defaultCycle => (_settings['cycle'] as num?)?.toInt() ?? 28;
-  int get defaultPeriod => (_settings['period'] as num?)?.toInt() ?? 5;
-
-  Forecast get forecast => _forecastCache ??= computeForecast(periodDays,
-      defaultCycle: defaultCycle, defaultPeriod: defaultPeriod);
+  Forecast get forecast => _forecastCache ??= computeForecast(periodDays);
 
   void _put(String key, Object? value, {bool deleted = false}) {
     _recs[key] = Rec(value, DateTime.now().millisecondsSinceEpoch,
@@ -143,14 +158,6 @@ class Store extends ChangeNotifier {
     for (var d = p.start; !d.isAfter(p.end); d = addDays(d, 1)) {
       if (isPeriod(d)) _setDayNoSave(d, period: false);
     }
-    _changed();
-  }
-
-  void setDefaults({int? cycle, int? period}) {
-    final v = _settings;
-    if (cycle != null) v['cycle'] = cycle;
-    if (period != null) v['period'] = period;
-    _put('settings', v);
     _changed();
   }
 
