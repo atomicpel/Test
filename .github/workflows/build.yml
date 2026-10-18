@@ -39,6 +39,17 @@ jobs:
           # Отключаем Impeller: на части Xiaomi/HyperOS он даёт чёрный экран
           sed -i 's|</application>|    <meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false" />\n    </application>|' $MAN
           cat $MAN
+          # R8 вырезает методы плагинов, вызываемые через JNI — запрещаем
+          cat > android/app/proguard-rules.pro <<'PRO'
+          -keep class io.flutter.plugins.** { *; }
+          -keep class dev.flutter.** { *; }
+          -keep class com.github.dart_lang.jni.** { *; }
+          -keep class kotlin.coroutines.** { *; }
+          -keep class kotlinx.coroutines.** { *; }
+          -keep class androidx.datastore.** { *; }
+          PRO
+          sed -i 's/^ *//' android/app/proguard-rules.pro
+          cat android/app/proguard-rules.pro
 
       - run: flutter pub get
       - run: dart run flutter_launcher_icons
