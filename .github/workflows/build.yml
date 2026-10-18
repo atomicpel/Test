@@ -54,7 +54,7 @@ jobs:
           echo "::notice::apksigner=$APKSIGNER in=$IN files=$(ls signing | tr '\n' ' ')"
           set +e
           OUT=$("$APKSIGNER" sign --ks signing/release.jks --ks-key-alias cycle \
-            --ks-pass file:signing/pass.txt --key-pass file:signing/pass.txt \
+            --ks-pass file:signing/pass.txt \
             --out MyCycle.apk "$IN" 2>&1)
           RC=$?
           set -e
