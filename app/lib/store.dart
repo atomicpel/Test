@@ -3,9 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'cycle.dart';
+import 'prefs.dart';
 
 /// Одна запись, синхронизируемая с сервером.
 class Rec {
@@ -28,7 +28,7 @@ class Rec {
 }
 
 class Store extends ChangeNotifier {
-  final SharedPreferences _prefs;
+  final Prefs _prefs;
   final Map<String, Rec> _recs;
   int _lastRev;
   String serverUrl;
@@ -44,7 +44,7 @@ class Store extends ChangeNotifier {
       this.lastSync);
 
   static Future<Store> load() async {
-    final p = await SharedPreferences.getInstance();
+    final p = await Prefs.open();
     final recs = <String, Rec>{};
     final raw = p.getString('recs');
     if (raw != null) {
