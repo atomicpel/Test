@@ -78,9 +78,9 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Настройки')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: [
-          Text('Синхронизация', style: theme.textTheme.titleMedium),
+          Text('Синхронизация', style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           if (!s.syncConfigured) ...[
             Text(
@@ -102,7 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
               leading: Icon(
                   s.syncError == null ? Icons.cloud_done : Icons.cloud_off,
                   color: s.syncError == null
-                      ? Colors.green
+                      ? Palette.ovulation
                       : theme.colorScheme.error),
               title: Text(Uri.tryParse(s.serverUrl)?.host ?? s.serverUrl),
               subtitle: Text(_lastSyncText(),
@@ -151,7 +151,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 labelText: 'Адрес сервера',
                 hintText: 'https://cycle.atomicpel.cloud-ip.cc',
                 helperText: 'Домен, который вы указали при установке сервера',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
@@ -163,7 +162,6 @@ class _SettingsPageState extends State<SettingsPage> {
               decoration: InputDecoration(
                 labelText: 'Токен',
                 helperText: 'На сервере: sudo cat /etc/cycle-sync.env',
-                border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   icon: Icon(
                       _showToken ? Icons.visibility_off : Icons.visibility),
@@ -180,7 +178,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
           const Divider(height: 40),
-          Text('Как считается прогноз', style: theme.textTheme.titleMedium),
+          Text('Как считается прогноз', style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(
             f.tentative

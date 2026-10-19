@@ -5,10 +5,13 @@ import 'dart:io';
 /// Без нативных плагинов: на Android Directory.systemTemp — это
 /// /data/user/0/<пакет>/cache, данные кладём рядом, в .../files.
 class Prefs {
-  final File _file;
+  final File? _file;
   final Map<String, dynamic> _data;
 
   Prefs._(this._file, this._data);
+
+  /// Хранилище только в памяти — для тестов и скриншотов.
+  Prefs.memory() : _file = null, _data = {};
 
   static Future<Prefs> open() async {
     Directory dir;
@@ -62,6 +65,8 @@ class Prefs {
   /// Пишем во временный файл и переименовываем — файл не побьётся,
   /// даже если приложение закроют во время записи.
   Future<void> _flush() {
+    final file = _file;
+    if (file == null) return Future.value();
     if (_pending != null) {
       _again = true;
       return _pending!;
@@ -70,12 +75,12 @@ class Prefs {
       do {
         _again = false;
         final text = jsonEncode(_data);
-        final tmp = File('${_file.path}.tmp');
+        final tmp = File('${file.path}.tmp');
         await tmp.writeAsString(text, flush: true);
-        if (await _file.exists()) {
-          await _file.copy('${_file.path}.bak');
+        if (await file.exists()) {
+          await file.copy('${file.path}.bak');
         }
-        await tmp.rename(_file.path);
+        await tmp.rename(file.path);
       } while (_again);
     }();
     return _pending!.whenComplete(() => _pending = null);

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'calendar_page.dart';
@@ -32,14 +33,16 @@ void main() {
   });
 }
 
-ThemeData _theme(Brightness b) => ThemeData(
-      useMaterial3: true,
-      brightness: b,
-      colorSchemeSeed: Palette.period,
-    );
-
 class CycleApp extends StatelessWidget {
-  const CycleApp({super.key});
+  /// Готовое хранилище (для скриншотов); обычно null — загружается с диска.
+  final Store? store;
+  final ThemeMode themeMode;
+  final int initialTab;
+  const CycleApp(
+      {super.key,
+      this.store,
+      this.themeMode = ThemeMode.system,
+      this.initialTab = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +52,12 @@ class CycleApp extends StatelessWidget {
       locale: const Locale('ru'),
       supportedLocales: const [Locale('ru')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: _theme(Brightness.light),
-      darkTheme: _theme(Brightness.dark),
-      home: const _Loader(),
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      themeMode: themeMode,
+      home: store != null
+          ? HomeShell(store: store!, initialTab: initialTab)
+          : const _Loader(),
     );
   }
 }
@@ -100,14 +106,15 @@ class _LoaderState extends State<_Loader> {
 
 class HomeShell extends StatefulWidget {
   final Store store;
-  const HomeShell({super.key, required this.store});
+  final int initialTab;
+  const HomeShell({super.key, required this.store, this.initialTab = 0});
 
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
 
 class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
-  int _tab = 0;
+  late int _tab = widget.initialTab;
 
   @override
   void initState() {
@@ -138,17 +145,23 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           SettingsPage(store: widget.store),
         ];
         return Scaffold(
-          body: IndexedStack(index: _tab, children: pages),
+          body: _FadeThroughStack(index: _tab, children: pages),
           bottomNavigationBar: NavigationBar(
             selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => _tab = i),
+            animationDuration: motion(context, 400),
+            onDestinationSelected: (i) {
+              if (i != _tab) HapticFeedback.selectionClick();
+              setState(() => _tab = i);
+            },
             destinations: const [
               NavigationDestination(
                   icon: Icon(Icons.calendar_month_outlined),
                   selectedIcon: Icon(Icons.calendar_month),
                   label: 'Календарь'),
               NavigationDestination(
-                  icon: Icon(Icons.history), label: 'История'),
+                  icon: Icon(Icons.bar_chart_outlined),
+                  selectedIcon: Icon(Icons.bar_chart),
+                  label: 'История'),
               NavigationDestination(
                   icon: Icon(Icons.settings_outlined),
                   selectedIcon: Icon(Icons.settings),
@@ -158,5 +171,39 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         );
       },
     );
+  }
+}
+
+/// Вкладки сохраняют состояние (как IndexedStack), но сменяются плавно:
+/// старая гаснет, новая проявляется с лёгким подъёмом.
+class _FadeThroughStack extends StatelessWidget {
+  final int index;
+  final List<Widget> children;
+  const _FadeThroughStack({required this.index, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final dur = motion(context, 260);
+    return Stack(fit: StackFit.expand, children: [
+      for (var i = 0; i < children.length; i++)
+        IgnorePointer(
+          ignoring: i != index,
+          child: ExcludeSemantics(
+            excluding: i != index,
+            child: AnimatedOpacity(
+              opacity: i == index ? 1 : 0,
+              duration: dur,
+              curve: i == index ? Curves.easeOut : Curves.easeIn,
+              child: AnimatedSlide(
+                offset: i == index ? Offset.zero : const Offset(0, 0.015),
+                duration: dur,
+                curve: Curves.easeOutCubic,
+                // анимации внутри скрытых вкладок не крутятся зря
+                child: TickerMode(enabled: i == index, child: children[i]),
+              ),
+            ),
+          ),
+        ),
+    ]);
   }
 }

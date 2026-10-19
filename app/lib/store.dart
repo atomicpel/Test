@@ -43,8 +43,9 @@ class Store extends ChangeNotifier {
   Store._(this._prefs, this._recs, this._lastRev, this.serverUrl, this.token,
       this.lastSync);
 
-  static Future<Store> load() async {
-    final p = await Prefs.open();
+  static Future<Store> load() async => loadFrom(await Prefs.open());
+
+  static Store loadFrom(Prefs p) {
     final recs = <String, Rec>{};
     final raw = p.getString('recs');
     if (raw != null) {
