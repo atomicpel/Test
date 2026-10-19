@@ -372,7 +372,7 @@ class _CapsulePainter extends CustomPainter {
       final x1 = x0 + (fullX1 - x0) * progress;
       final rect = RRect.fromLTRBR(
           x0, top, x1 < x0 + h ? x0 + h * progress : x1, top + h,
-          const Radius.circular(h / 2));
+          Radius.circular(h / 2));
       final double opacity =
           progress < 0 ? 0.0 : (progress > 1 ? 1.0 : progress);
       switch (g) {

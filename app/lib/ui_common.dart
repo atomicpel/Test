@@ -199,11 +199,13 @@ ThemeData buildTheme(Brightness b, AppThemeSpec spec) {
     visualDensity: const VisualDensity(horizontal: -1, vertical: -2),
     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     listTileTheme: ListTileThemeData(
+      iconColor: accent,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       minVerticalPadding: 6,
       titleTextStyle: TextStyle(
           fontFamily: kFont, fontSize: 15, fontWeight: FontWeight.w600, color: fg),
-      subtitleTextStyle: TextStyle(fontFamily: kFont, fontSize: 12.5, color: muted),
+      subtitleTextStyle:
+          TextStyle(fontFamily: kFont, fontSize: 12.5, color: muted, height: 1.3),
     ),
     dividerTheme: DividerThemeData(color: border, space: 1, thickness: 1),
     extensions: [
@@ -328,22 +330,14 @@ ThemeData buildTheme(Brightness b, AppThemeSpec spec) {
       indicatorColor: accent,
       dividerColor: Colors.transparent,
       labelStyle: const TextStyle(
-          fontFamily: kFont, fontSize: 18, fontWeight: FontWeight.w700),
+          fontFamily: kFont, fontSize: 15.5, fontWeight: FontWeight.w700),
       unselectedLabelStyle: const TextStyle(
-          fontFamily: kFont, fontSize: 18, fontWeight: FontWeight.w600),
+          fontFamily: kFont, fontSize: 15.5, fontWeight: FontWeight.w600),
       indicator: UnderlineTabIndicator(
         borderSide: BorderSide(color: accent, width: 4),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
         insets: const EdgeInsets.symmetric(horizontal: 18),
       ),
-    ),
-    dividerTheme: DividerThemeData(color: border, space: 1, thickness: 1),
-    listTileTheme: ListTileThemeData(
-      iconColor: accent,
-      titleTextStyle: TextStyle(
-          fontFamily: kFont, fontSize: 17, fontWeight: FontWeight.w600, color: fg),
-      subtitleTextStyle:
-          TextStyle(fontFamily: kFont, fontSize: 14.5, color: muted, height: 1.3),
     ),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: SharedAxisPageTransitionsBuilder(
