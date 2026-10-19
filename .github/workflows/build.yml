@@ -57,8 +57,9 @@ jobs:
         continue-on-error: true
         run: |
           cp "$(dirname "$(which flutter)")/cache/artifacts/material_fonts/MaterialIcons-Regular.otf" screenshot_test/
-          flutter test screenshot_test --update-goldens
-          ls -la screenshot_test/out
+          flutter test screenshot_test --update-goldens > shots.txt 2>&1 || true
+          tail -40 shots.txt
+          ls -la screenshot_test/out || true
 
       - name: Сборка
         run: |
@@ -88,6 +89,9 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Папка для проверки
+        run: mkdir -p smoke && echo "эмулятор не запустился" > smoke/smoke_report.txt
+
       - name: Проверка на эмуляторе Android
         continue-on-error: true
         timeout-minutes: 25
@@ -102,11 +106,19 @@ jobs:
           script: bash app/tools/smoke.sh app/MyCycle-x86_64.apk app/smoke
 
       - name: Релиз
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          TAG="app-1.0.${{ github.run_number }}"
+          if [ -f MyCycle.apk ]; then
+            gh release create "$TAG" MyCycle.apk --title "Мой цикл 1.0.${{ github.run_number }}" \
+              --notes "Сборка из ${{ github.sha }}"
+          else
+            gh release create "$TAG" --prerelease --title "Диагностика ${{ github.run_number }}" \
+              --notes "Сборка не удалась, только журналы"
+          fi
           shopt -s nullglob
-          SHOTS=(screenshot_test/out/*.png smoke/*.png smoke/smoke_report.txt)
-          gh release create "app-1.0.${{ github.run_number }}" MyCycle.apk "${SHOTS[@]}" \
-            --title "Мой цикл 1.0.${{ github.run_number }}" \
-            --notes "Сборка из ${{ github.sha }}"
+          for f in screenshot_test/out/*.png smoke/*.png smoke/smoke_report.txt shots.txt analyze.txt test.txt build.txt; do
+            if [ -s "$f" ]; then gh release upload "$TAG" "$f" --clobber || echo "skip $f"; fi
+          done
