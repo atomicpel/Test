@@ -135,7 +135,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="app-1.0.${{ github.run_number }}"
-          if [ -f MyCycle.apk ]; then
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # повторный запуск той же сборки — обновляем файлы в существующем релизе
+            [ -f MyCycle.apk ] && gh release upload "$TAG" MyCycle.apk --clobber
+          elif [ -f MyCycle.apk ]; then
             gh release create "$TAG" MyCycle.apk --title "Мой цикл 1.0.${{ github.run_number }}" \
               --notes "Сборка из ${{ github.sha }}"
           else
