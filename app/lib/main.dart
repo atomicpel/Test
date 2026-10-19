@@ -145,7 +145,7 @@ class _CycleAppState extends State<CycleApp> {
   void _onStore() {
     final s = _store!;
     final k =
-        '${widget.themeOverride ?? s.themeId}|${widget.darkOverride ?? s.dark}';
+        '${widget.themeOverride ?? s.themeId}|${widget.darkOverride ?? s.dark}|${s.textScale}';
     if (k != _themeKey) setState(() => _themeKey = k);
   }
 
@@ -199,7 +199,18 @@ class _CycleAppState extends State<CycleApp> {
       themeMode: dark ? ThemeMode.dark : ThemeMode.light,
       themeAnimationDuration: const Duration(milliseconds: 450),
       themeAnimationCurve: Curves.easeOutCubic,
-      builder: (context, child) => ThemeSpecScope(spec: spec, child: child!),
+      builder: (context, child) {
+        Widget c = ThemeSpecScope(spec: spec, child: child!);
+        final k = s?.textScale ?? 0;
+        if (k > 0) {
+          c = MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(k)),
+            child: c,
+          );
+        }
+        return c;
+      },
       home: home,
     );
   }

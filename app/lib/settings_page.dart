@@ -53,6 +53,9 @@ class SettingsPage extends StatelessWidget {
               _Tile('Ваше имя',
                   subtitle: store.name.isEmpty ? null : store.name,
                   onTap: () => _editName(context)),
+              _Tile('Размер шрифта',
+                  subtitle: fontScaleLabel(store.textScale),
+                  onTap: () => _push(context, FontSizePage(store: store))),
               _Tile('Безопасный вход (PIN-код)',
                   subtitle: pinEnabled(store) ? 'Включён' : 'Выключен',
                   onTap: () => _push(context, SecurityPage(store: store))),
@@ -601,6 +604,66 @@ class _RemindersPageState extends State<RemindersPage> with WidgetsBindingObserv
           ),
         ];
       },
+    );
+  }
+}
+
+// ---------------------------------------------------------------- шрифт
+
+const fontScales = <(double, String)>[
+  (0, 'Как в настройках телефона'),
+  (0.8, 'Мелкий'),
+  (0.9, 'Уменьшенный'),
+  (1.0, 'Обычный'),
+  (1.1, 'Крупный'),
+];
+
+String fontScaleLabel(double k) =>
+    fontScales.firstWhere((e) => e.$1 == k, orElse: () => (k, '×$k')).$2;
+
+class FontSizePage extends StatelessWidget {
+  final Store store;
+  const FontSizePage({super.key, required this.store});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return _Page(
+      title: 'Размер шрифта',
+      store: store,
+      children: (context) => [
+        _note(context,
+            'Меняет размер текста во всём приложении. Изменение видно сразу.'),
+        for (final (k, label) in fontScales)
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            title: Text(label),
+            trailing: AnimatedSwitcher(
+              duration: motion(context, 200),
+              transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+              child: store.textScale == k
+                  ? Icon(Icons.check_circle,
+                      key: const ValueKey(true), color: theme.colorScheme.primary)
+                  : const Icon(Icons.circle_outlined,
+                      key: ValueKey(false), color: Colors.transparent),
+            ),
+            onTap: () => store.setLocal('textScale', k == 0 ? null : k),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: AppCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Пример', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text('20 дней до месячных', style: theme.textTheme.headlineSmall),
+                const SizedBox(height: 4),
+                Text('8 ноября, ±1 день',
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: AppColors.of(context).muted)),
+              ]),
+          ),
+        ),
+      ],
     );
   }
 }

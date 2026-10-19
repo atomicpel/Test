@@ -324,6 +324,9 @@ class Store extends ChangeNotifier {
 
   String get themeId => local<String>('theme', 'cats');
   bool get dark => local<bool>('dark', true);
+
+  /// Размер шрифта: 0 — как в настройках телефона, иначе свой множитель.
+  double get textScale => local<num>('textScale', 0).toDouble();
   bool get secretNotifications => local<bool>('secret', false);
 
   Map<String, dynamic> get reminders {
