@@ -23,9 +23,10 @@ ls -la /dev/kvm >> "$SETUP" 2>&1 || log "нет /dev/kvm"
 log "лицензии"
 yes | "$BIN/sdkmanager" --licenses > /dev/null 2>&1
 log "установка эмулятора и образа $IMG"
-"$BIN/sdkmanager" --install "emulator" "platform-tools" "$IMG" > "$OUT/sdk_install.txt" 2>&1
-log "sdkmanager код $?"
-tail -5 "$OUT/sdk_install.txt" >> "$SETUP"
+"$BIN/sdkmanager" --install "emulator" "platform-tools" "$IMG" 2>&1 | tr '\r' '\n' > "$OUT/sdk_install.txt"
+log "sdkmanager код ${PIPESTATUS[0]}"
+grep -iE "warning|error|done" "$OUT/sdk_install.txt" | tail -8 >> "$SETUP"
+df -h / >> "$SETUP" 2>&1
 ls "$SDK/system-images/android-34/google_apis/x86_64" >> "$SETUP" 2>&1
 
 log "создание AVD"

@@ -82,6 +82,18 @@ jobs:
           "$APKSIGNER" verify MyCycle.apk && "$APKSIGNER" verify MyCycle-x86_64.apk
           ls -la MyCycle*.apk
 
+      - name: Место на диске для эмулятора
+        continue-on-error: true
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost \
+            /usr/local/share/powershell /usr/share/swift /usr/local/lib/node_modules \
+            /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go /opt/hostedtoolcache/PyPy \
+            /opt/microsoft /opt/google /opt/az /usr/local/julia* || true
+          docker system prune -af > /dev/null 2>&1 || true
+          rm -rf build/app/intermediates "$HOME/.gradle/caches" || true
+          df -h /
+
       - name: Включить KVM для эмулятора
         working-directory: .
         run: |
