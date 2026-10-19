@@ -8,6 +8,7 @@ import 'lock.dart';
 import 'native.dart';
 import 'reminders.dart';
 import 'store.dart';
+import 'updater.dart';
 import 'ui_common.dart';
 import 'widgets_common.dart';
 
@@ -72,6 +73,17 @@ class SettingsPage extends StatelessWidget {
                   onTap: () => Native.share(store.exportJson(), subject: 'Мой цикл — резервная копия')),
               _Tile('Удалить данные из приложения', danger: true, onTap: () => _deleteAll(context)),
               const _Header(Icons.info_outline, 'О приложении'),
+              const _VersionTile(),
+              _Tile('Проверить обновления',
+                  subtitle: store.syncConfigured
+                      ? 'Обновления приходят с вашего сервера'
+                      : 'Нужен подключённый сервер',
+                  onTap: () => Updater.manualCheck(context, store)),
+              if (store.syncConfigured)
+                _Tile('Ссылка на скачивание приложения',
+                    subtitle: '${store.serverUrl}/app',
+                    onTap: () => Native.share('${store.serverUrl}/app',
+                        subject: 'Мой цикл — скачать приложение')),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
                 child: Text(
@@ -133,6 +145,25 @@ class SettingsPage extends StatelessWidget {
       store.deleteAll();
       if (context.mounted) showSnack(context, 'Данные удалены');
     }
+  }
+}
+
+class _VersionTile extends StatelessWidget {
+  const _VersionTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: Updater.current(),
+      builder: (context, snap) {
+        final v = snap.data;
+        return ListTile(
+          title: const Text('Версия'),
+          trailing: Text(v == null ? '—' : v.name,
+              style: Theme.of(context).textTheme.bodyLarge),
+        );
+      },
+    );
   }
 }
 

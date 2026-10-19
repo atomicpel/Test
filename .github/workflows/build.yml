@@ -106,6 +106,29 @@ jobs:
         timeout-minutes: 25
         run: bash tools/emulator.sh MyCycle-x86_64.apk smoke
 
+      - name: Публикация на свой сервер
+        if: success()
+        continue-on-error: true
+        env:
+          CYCLE_PUBLISH: ${{ secrets.CYCLE_PUBLISH }}
+        run: |
+          if [ -z "$CYCLE_PUBLISH" ]; then
+            echo "::notice::Секрет CYCLE_PUBLISH не задан — на сервер не выкладываю"; exit 0
+          fi
+          # не выкладывать версию, которая вылетела на эмуляторе
+          if grep -q "AndroidRuntime: Process: ru.atomicpel" smoke/smoke_report.txt 2>/dev/null; then
+            echo "::error::Приложение вылетело на эмуляторе — на сервер не выкладываю"; exit 1
+          fi
+          URL="${CYCLE_PUBLISH%%#*}"; TOK="${CYCLE_PUBLISH#*#}"
+          curl -fsS --retry 3 --max-time 300 -X POST "$URL/api/publish" \
+            -H "Authorization: Bearer $TOK" \
+            -H "X-Version: 1.0.${{ github.run_number }}" \
+            -H "X-Build: ${{ github.run_number }}" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary @MyCycle.apk -o publish.txt -w "%{http_code}\n" || { cat publish.txt; echo "::error::Не удалось выложить на сервер"; exit 1; }
+          cat publish.txt; echo
+          echo "::notice::Выложено на $URL/app"
+
       - name: Релиз
         if: always()
         env:

@@ -31,6 +31,7 @@ perms = [
     'android.permission.VIBRATE',
     'android.permission.USE_EXACT_ALARM',
     'android.permission.USE_BIOMETRIC',
+    'android.permission.REQUEST_INSTALL_PACKAGES',
 ]
 block = ''
 for p in perms:
@@ -58,6 +59,13 @@ receivers = '''
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/cycle_widget_info" />
         </receiver>
+        <provider
+            android:name=".ApkFileProvider"
+            android:authorities="${applicationId}.apkprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/apk_paths" />
+        </provider>
         <!-- Impeller выключен: на части Xiaomi/HyperOS он давал чёрный экран -->
         <meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false" />
     </application>'''
@@ -89,7 +97,8 @@ if gk.exists():
         g = re.sub(r'(release\s*\{)',
                    r'\1\n            isMinifyEnabled = false\n            isShrinkResources = false', g, count=1)
     if 'desugar_jdk_libs' not in g:
-        g += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+        g += ('\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n'
+              '    implementation("androidx.core:core:1.13.1")\n}\n')
     gk.write_text(g)
     log('build.gradle.kts ok')
 else:
@@ -102,7 +111,8 @@ else:
     if 'minifyEnabled' not in g:
         g = re.sub(r'(release\s*\{)', r'\1\n            minifyEnabled false\n            shrinkResources false', g, count=1)
     if 'desugar_jdk_libs' not in g:
-        g += "\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n"
+        g += ("\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n"
+              "    implementation 'androidx.core:core:1.13.1'\n}\n")
     gg.write_text(g)
     log('build.gradle ok')
 

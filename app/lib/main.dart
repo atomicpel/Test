@@ -13,6 +13,7 @@ import 'lock.dart';
 import 'native.dart';
 import 'prefs.dart';
 import 'reminders.dart';
+import 'updater.dart';
 import 'settings_page.dart';
 import 'stats_page.dart';
 import 'store.dart';
@@ -256,6 +257,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (s.local<int>('ringColor', 0) == 0) {
       s.setLocal('ringColor', themeById(s.themeId).ring.toARGB32());
     }
+    if (mounted) await Updater.autoCheck(context, s);
   }
 
   @override
@@ -270,6 +272,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       widget.store.sync();
       _services.refresh();
+      if (!widget.smoke) Updater.autoCheck(context, widget.store);
     }
   }
 
