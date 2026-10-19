@@ -30,7 +30,8 @@ String plural(int n, String one, String few, String many) {
   return many;
 }
 
-String daysWord(int n) => '$n ${plural(n, 'день', 'дня', 'дней')}';
+// неразрывный пробел: «5 дней» не разрывается между строк
+String daysWord(int n) => '$n\u00A0${plural(n, 'день', 'дня', 'дней')}';
 
 /// Шрифты: Unbounded — цифры и заголовки, Golos — текст.
 const kDisplay = 'Unbounded';
@@ -47,6 +48,13 @@ class Palette {
   static const night = Color(0xFF170C12);
   static const nightRaised = Color(0xFF231620);
   static const nightText = Color(0xFFF7E9EE);
+
+  /// Заливка фертильных дней: в тёмной теме полупрозрачная бирюза
+  /// на сливовом фоне становится серой, поэтому цвета заданы явно.
+  static Color fertileFill(Brightness b) =>
+      b == Brightness.dark ? const Color(0xFF17423F) : const Color(0xFFD2EEEA);
+  static Color fertileText(Brightness b) =>
+      b == Brightness.dark ? const Color(0xFFB4EAE4) : const Color(0xFF0F5B56);
 }
 
 Color? kindColor(DayKind k) => switch (k) {

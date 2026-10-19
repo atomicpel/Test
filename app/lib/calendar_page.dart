@@ -478,7 +478,8 @@ class _DayCellState extends State<_DayCell>
         fill = color!.withValues(alpha: 0.16);
         border = Border.all(color: color, width: 2);
       case DayKind.fertile:
-        fill = color!.withValues(alpha: 0.32);
+        fill = Palette.fertileFill(theme.brightness);
+        textColor = Palette.fertileText(theme.brightness);
       case DayKind.none:
         break;
     }
@@ -557,7 +558,7 @@ class _Legend extends StatelessWidget {
           ],
         );
     return Wrap(
-      spacing: 16,
+      spacing: 14,
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
@@ -570,10 +571,12 @@ class _Legend extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: Palette.predicted, width: 2))),
         item(
-            'Фертильные дни',
+            'Фертильные',
             BoxDecoration(
-                color: Palette.fertile.withValues(alpha: 0.45),
-                shape: BoxShape.circle)),
+                color: Palette.fertileFill(theme.brightness),
+                shape: BoxShape.circle,
+                border: Border.all(
+                    color: Palette.fertile.withValues(alpha: 0.6), width: 1))),
         item('Овуляция',
             const BoxDecoration(color: Palette.ovulation, shape: BoxShape.circle)),
       ],
