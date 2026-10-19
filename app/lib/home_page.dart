@@ -157,7 +157,9 @@ class _HomeLayout {
       cellH += 1;
     }
     final room = circleFor(cellH);
-    final circle = room.clamp(150.0, maxCircle).toDouble();
+    // при первом кадре размеры бывают нулевыми — не падаем
+    final fit = math.min(room, maxCircle);
+    final circle = fit >= 150 ? fit : math.max(0.0, math.min(150.0, maxCircle));
     // оставшийся воздух делим поровну сверху и под кругом
     final spare = math.max(0.0, room - circle);
     final circleTop = 8 + spare / 2;

@@ -234,7 +234,12 @@ class Reminders {
     await init();
     if (!_ready) return 0;
     try {
-      await _plugin.cancelAll();
+      // Снимаем только запланированные (cancelAll убрал бы и уже показанные
+      // уведомления, и пробное, если оно ещё не пришло).
+      final pending = await _plugin.pendingNotificationRequests();
+      for (final p in pending) {
+        if (p.id != 9) await _plugin.cancel(id: p.id);
+      }
       for (final n in notes) {
         await _schedule(n);
       }
