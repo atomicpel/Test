@@ -1,2 +1,4 @@
 app/screenshot_test/out/
 app/screenshot_test/*.otf
+app/smoke/
+app/MyCycle*.apk

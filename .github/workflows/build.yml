@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: app
@@ -30,26 +31,11 @@ jobs:
 
       - name: Android-проект
         run: |
+          flutter --version
           flutter create --org ru.atomicpel --project-name cycle_app --platforms android .
           rm -f test/widget_test.dart
-          MAN=android/app/src/main/AndroidManifest.xml
-          sed -i 's/android:label="cycle_app"/android:label="Мой цикл"/' $MAN
-          grep -q 'permission.INTERNET' $MAN || \
-            sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' $MAN
-          # Отключаем Impeller: на части Xiaomi/HyperOS он даёт чёрный экран
-          sed -i 's|</application>|    <meta-data android:name="io.flutter.embedding.android.EnableImpeller" android:value="false" />\n    </application>|' $MAN
-          cat $MAN
-          # R8 вырезает методы плагинов, вызываемые через JNI — запрещаем
-          cat > android/app/proguard-rules.pro <<'PRO'
-          -keep class io.flutter.plugins.** { *; }
-          -keep class dev.flutter.** { *; }
-          -keep class com.github.dart_lang.jni.** { *; }
-          -keep class kotlin.coroutines.** { *; }
-          -keep class kotlinx.coroutines.** { *; }
-          -keep class androidx.datastore.** { *; }
-          PRO
-          sed -i 's/^ *//' android/app/proguard-rules.pro
-          cat android/app/proguard-rules.pro
+          python3 tools/patch_android.py .
+          cat android/app/build.gradle.kts || cat android/app/build.gradle
 
       - run: flutter pub get
       - run: dart run flutter_launcher_icons
@@ -75,33 +61,52 @@ jobs:
           ls -la screenshot_test/out
 
       - name: Сборка
-        run: flutter build apk --release --target-platform android-arm64 --build-number=${{ github.run_number }} --build-name=1.0.${{ github.run_number }}
+        run: |
+          flutter build apk --release --split-per-abi --target-platform android-arm64,android-x64 \
+            --build-number=${{ github.run_number }} --build-name=1.0.${{ github.run_number }} > build.txt 2>&1 \
+            || { tail -80 build.txt; grep -E "^e:|error:|What went wrong" -A3 build.txt | head -20 | while read -r l; do echo "::error::$l"; done; exit 1; }
+          tail -5 build.txt
+          ls -la build/app/outputs/flutter-apk/
 
       - name: Подпись своим ключом
         run: |
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           APKSIGNER=$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -1)
-          IN=$(find build/app/outputs -name '*release*.apk' | head -1)
-          echo "::notice::apksigner=$APKSIGNER in=$IN files=$(ls signing | tr '\n' ' ')"
-          set +e
-          OUT=$("$APKSIGNER" sign --ks signing/release.jks --ks-key-alias cycle \
-            --ks-pass file:signing/pass.txt \
-            --out MyCycle.apk "$IN" 2>&1)
-          RC=$?
-          set -e
-          if [ $RC -ne 0 ]; then
-            echo "::error::apksigner rc=$RC: $(echo "$OUT" | tr '\n' ' ' | cut -c1-900)"
-            exit 1
-          fi
-          "$APKSIGNER" verify MyCycle.apk
-          ls -la MyCycle.apk
+          sign() {
+            "$APKSIGNER" sign --ks signing/release.jks --ks-key-alias cycle \
+              --ks-pass file:signing/pass.txt --out "$2" "$1"
+          }
+          sign build/app/outputs/flutter-apk/app-arm64-v8a-release.apk MyCycle.apk
+          sign build/app/outputs/flutter-apk/app-x86_64-release.apk MyCycle-x86_64.apk
+          "$APKSIGNER" verify MyCycle.apk && "$APKSIGNER" verify MyCycle-x86_64.apk
+          ls -la MyCycle*.apk
+
+      - name: Включить KVM для эмулятора
+        working-directory: .
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Проверка на эмуляторе Android
+        continue-on-error: true
+        timeout-minutes: 25
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash app/tools/smoke.sh app/MyCycle-x86_64.apk app/smoke
 
       - name: Релиз
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          SHOTS=(screenshot_test/out/*.png)
+          SHOTS=(screenshot_test/out/*.png smoke/*.png smoke/smoke_report.txt)
           gh release create "app-1.0.${{ github.run_number }}" MyCycle.apk "${SHOTS[@]}" \
             --title "Мой цикл 1.0.${{ github.run_number }}" \
             --notes "Сборка из ${{ github.sha }}"
