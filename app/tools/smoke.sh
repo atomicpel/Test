@@ -30,11 +30,15 @@ grep -i -B2 -A8 "CycleWidget" "$OUT/appwidget_full.txt" | head -60 > "$OUT/widge
 adb shell dumpsys notification --noredact > "$OUT/notif_full.txt" 2>&1
 grep -i -A6 "pkg=$PKG" "$OUT/notif_full.txt" | head -80 > "$OUT/notifications.txt"
 adb shell pidof $PKG > "$OUT/pid.txt" 2>&1 || echo "not running" > "$OUT/pid.txt"
+adb shell dumpsys package $PKG | grep -E "versionName|POST_NOTIFICATIONS|USE_EXACT_ALARM|USE_BIOMETRIC" > "$OUT/package.txt" 2>&1
+adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" > "$OUT/focus.txt" 2>&1
 adb logcat -d > "$OUT/logcat_full.txt"
 grep -E "FATAL|AndroidRuntime|Exception|Error|flutter" "$OUT/logcat_full.txt" | head -300 > "$OUT/logcat.txt"
 # Сводка в один файл
 {
   echo "== pid"; cat "$OUT/pid.txt"
+  echo "== focus"; cat "$OUT/focus.txt"
+  echo "== package"; cat "$OUT/package.txt"
   echo "== install"; cat "$OUT/install.txt"
   echo "== alarms"; cat "$OUT/alarms.txt"
   echo "== widget"; cat "$OUT/widget.txt"

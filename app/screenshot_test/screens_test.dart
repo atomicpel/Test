@@ -74,7 +74,7 @@ void main() {
     await _shot(tester, '03_home_page2');
     await tester.tap(_sem('Записать сегодняшний день'));
     await _shot(tester, '04_daylog');
-    await tester.drag(find.byType(ListView).last, const Offset(0, -900));
+    await tester.drag(find.byKey(const ValueKey('day-log-list')).last, const Offset(0, -900));
     await _shot(tester, '05_daylog_scrolled');
     await _finish(tester);
   });

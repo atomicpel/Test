@@ -178,10 +178,15 @@ class _CycleCircleState extends State<CycleCircle>
     final theme = Theme.of(context);
     final d = widget.size;
     final accent = theme.colorScheme.primary;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(d * 0.06, 0, d * 0.06, d * 0.12),
+    final stroke = d * 0.072;
+    final inner = d - 2 * (stroke + d * 0.04);
+    final colW = inner * 0.84;
+    // Всё содержимое круга вписывается целиком: если текст длинный
+    // или шрифт крупный, блок аккуратно уменьшается, а не вылезает.
+    final column = SizedBox(
+      width: colW,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (number != null)
             TweenAnimationBuilder<double>(
@@ -191,52 +196,71 @@ class _CycleCircleState extends State<CycleCircle>
               curve: Curves.easeOutCubic,
               builder: (context, v, _) => Text(
                 '${v.round()}',
+                textScaler: TextScaler.noScaling,
                 style: theme.textTheme.displayLarge?.copyWith(
-                    fontSize: d * 0.26, color: theme.colorScheme.onSurface),
+                    fontSize: d * 0.25,
+                    height: 1.05,
+                    color: theme.colorScheme.onSurface),
               ),
             )
           else if (bigText != null)
             Text(bigText,
                 style: theme.textTheme.displayLarge?.copyWith(
-                    fontSize: d * 0.13, color: theme.colorScheme.onSurface)),
-          SizedBox(height: d * 0.01),
+                    fontSize: d * 0.13,
+                    height: 1.1,
+                    color: theme.colorScheme.onSurface)),
+          SizedBox(height: d * 0.008),
           Text(label,
               textAlign: TextAlign.center,
               maxLines: 2,
               style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w600,
-                  fontSize: number == null && bigText == null ? d * 0.068 : d * 0.075,
+                  fontSize: number == null && bigText == null ? d * 0.066 : d * 0.07,
                   height: 1.15)),
           if (sub != null) ...[
-            SizedBox(height: d * 0.012),
+            SizedBox(height: d * 0.01),
             Text(sub,
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.of(context).muted, fontSize: d * 0.05)),
+                    color: AppColors.of(context).muted,
+                    fontSize: d * 0.046,
+                    height: 1.25)),
           ],
-          SizedBox(height: d * 0.04),
+          SizedBox(height: d * 0.045),
           Pressable(
             onTap: onButton,
             child: Container(
-              padding:
-                  EdgeInsets.symmetric(horizontal: d * 0.07, vertical: d * 0.025),
+              constraints: BoxConstraints(maxWidth: colW),
+              padding: EdgeInsets.symmetric(
+                  horizontal: d * 0.06, vertical: d * 0.024),
               decoration: BoxDecoration(
                 color: filled ? accent : Colors.transparent,
                 borderRadius: BorderRadius.circular(40),
                 border: Border.all(color: accent, width: 2),
               ),
-              child: Text(button,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontFamily: kFont,
-                      fontWeight: FontWeight.w700,
-                      fontSize: d * 0.058,
-                      height: 1.1,
-                      color: filled ? theme.colorScheme.onPrimary : accent)),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(button,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                        fontFamily: kFont,
+                        fontWeight: FontWeight.w700,
+                        fontSize: d * 0.052,
+                        height: 1.15,
+                        color: filled ? theme.colorScheme.onPrimary : accent)),
+              ),
             ),
           ),
         ],
+      ),
+    );
+    return Padding(
+      // сверху — немного воздуха, снизу — место под точки страниц
+      padding: EdgeInsets.fromLTRB(0, inner * 0.08, 0, d * 0.07 + 8 + d * 0.035),
+      child: Center(
+        child: FittedBox(fit: BoxFit.scaleDown, child: column),
       ),
     );
   }

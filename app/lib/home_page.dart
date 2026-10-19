@@ -43,7 +43,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final w = mq.size.width;
-    final circle = math.min(w * 0.68, 300.0);
+    final circle = math.min(w * 0.72, 320.0);
     final headerH = mq.padding.top + circle + 76;
     final store = widget.store;
     return RefreshIndicator(
@@ -271,17 +271,21 @@ class _Legend extends StatelessWidget {
   Widget build(BuildContext context) {
     final b = Theme.of(context).brightness;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 10,
-        alignment: WrapAlignment.center,
-        children: [
-          const DotLabel(Palette.period, 'Месячные'),
-          const DotLabel(Palette.predicted, 'Прогноз', outline: true),
-          const DotLabel(Palette.fertile, 'Фертильные', outline: true),
-          DotLabel(Palette.ovulation(b), 'Овуляция'),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const DotLabel(Palette.period, 'Месячные'),
+            const SizedBox(width: 14),
+            const DotLabel(Palette.predicted, 'Прогноз', outline: true),
+            const SizedBox(width: 14),
+            const DotLabel(Palette.fertile, 'Фертильные', outline: true),
+            const SizedBox(width: 14),
+            DotLabel(Palette.ovulation(b), 'Овуляция'),
+          ],
+        ),
       ),
     );
   }

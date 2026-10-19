@@ -89,21 +89,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Папка для проверки
-        run: mkdir -p smoke && echo "эмулятор не запустился" > smoke/smoke_report.txt
-
       - name: Проверка на эмуляторе Android
         continue-on-error: true
         timeout-minutes: 25
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          disable-animations: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash app/tools/smoke.sh app/MyCycle-x86_64.apk app/smoke
+        run: bash tools/emulator.sh MyCycle-x86_64.apk smoke
 
       - name: Релиз
         if: always()
@@ -119,6 +108,6 @@ jobs:
               --notes "Сборка не удалась, только журналы"
           fi
           shopt -s nullglob
-          for f in screenshot_test/out/*.png smoke/*.png smoke/smoke_report.txt shots.txt analyze.txt test.txt build.txt; do
+          for f in screenshot_test/out/*.png smoke/*.png smoke/smoke_report.txt smoke/emu_setup.txt smoke/logcat_full.txt shots.txt analyze.txt test.txt build.txt; do
             if [ -s "$f" ]; then gh release upload "$TAG" "$f" --clobber || echo "skip $f"; fi
           done

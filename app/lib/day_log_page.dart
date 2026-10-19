@@ -251,6 +251,7 @@ class _DayContent extends StatelessWidget {
       ),
     ));
     return ListView(
+      key: const ValueKey('day-log-list'),
       padding: const EdgeInsets.only(top: 4),
       children: [
         for (var i = 0; i < children.length; i++)
