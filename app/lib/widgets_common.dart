@@ -53,7 +53,7 @@ class AppCard extends StatelessWidget {
   const AppCard(
       {super.key,
       required this.child,
-      this.padding = const EdgeInsets.all(18),
+      this.padding = const EdgeInsets.all(14),
       this.onTap});
 
   @override
@@ -318,15 +318,15 @@ class DotLabel extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Container(
-        width: 16,
-        height: 16,
+        width: 13,
+        height: 13,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: outline ? Colors.transparent : color,
-          border: outline ? Border.all(color: color, width: 2.4) : null,
+          border: outline ? Border.all(color: color, width: 2.2) : null,
         ),
       ),
-      const SizedBox(width: 8),
+      const SizedBox(width: 6),
       Text(text, style: theme.textTheme.bodyMedium),
     ]);
   }

@@ -42,67 +42,132 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    final w = mq.size.width;
-    final circle = math.min(w * 0.72, 320.0);
-    final headerH = mq.padding.top + circle + 76;
     final store = widget.store;
-    return RefreshIndicator(
-      onRefresh: store.sync,
-      edgeOffset: mq.padding.top,
-      child: ListView(
-        controller: _scroll,
-        padding: EdgeInsets.zero,
-        children: [
-          SizedBox(
-            height: headerH,
-            child: Stack(clipBehavior: Clip.none, children: [
-              // Иллюстрация уезжает медленнее, чем список (параллакс)
-              Positioned(
-                top: -_offset * 0.45,
-                left: 0,
-                right: 0,
-                height: headerH + 40,
-                child: _HeaderArt(height: headerH + 40),
-              ),
-              Positioned(
-                top: mq.padding.top + 36 + _offset * 0.12,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: _Appear(
-                    child: CycleCircle(
-                      store: store,
-                      size: circle,
-                      onLog: () => widget.onOpenDay(DateTime.now()),
+    return LayoutBuilder(builder: (context, box) {
+      final l = _HomeLayout.compute(
+        width: box.maxWidth,
+        height: box.maxHeight,
+        top: mq.padding.top,
+        bottom: mq.padding.bottom,
+      );
+      final headerH = l.headerH;
+      return RefreshIndicator(
+        onRefresh: store.sync,
+        edgeOffset: mq.padding.top,
+        child: ListView(
+          controller: _scroll,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          children: [
+            SizedBox(
+              height: headerH,
+              child: Stack(clipBehavior: Clip.none, children: [
+                // Иллюстрация уезжает медленнее, чем список (параллакс)
+                Positioned(
+                  top: -_offset * 0.45,
+                  left: 0,
+                  right: 0,
+                  height: headerH + 44,
+                  child: _HeaderArt(height: headerH + 44),
+                ),
+                Positioned(
+                  top: mq.padding.top + l.circleTop + _offset * 0.12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _Appear(
+                      child: CycleCircle(
+                        store: store,
+                        size: l.circle,
+                        onLog: () => widget.onOpenDay(DateTime.now()),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                top: mq.padding.top + 8,
-                right: 12,
-                child: _RoundButton(
-                    icon: Icons.palette_outlined,
-                    tooltip: 'Темы',
-                    onTap: widget.onThemes),
-              ),
-              if (store.syncConfigured)
                 Positioned(
-                  top: mq.padding.top + 8,
-                  left: 12,
-                  child: _SyncBadge(store: store),
+                  top: mq.padding.top + 6,
+                  right: 10,
+                  child: _RoundButton(
+                      icon: Icons.palette_outlined,
+                      tooltip: 'Темы',
+                      onTap: widget.onThemes),
                 ),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-            child: MonthCalendar(store: store, onDayTap: widget.onOpenDay),
-          ),
-          const SizedBox(height: 10),
-          const _Legend(),
-          const SizedBox(height: 110),
-        ],
-      ),
+                if (store.syncConfigured)
+                  Positioned(
+                    top: mq.padding.top + 6,
+                    left: 10,
+                    child: _SyncBadge(store: store),
+                  ),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: MonthCalendar(
+                  store: store, onDayTap: widget.onOpenDay, cellH: l.cellH),
+            ),
+            const SizedBox(height: _HomeLayout.legendGap),
+            const SizedBox(height: _HomeLayout.legendH, child: _Legend()),
+            SizedBox(height: l.bottomSpace),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+/// Раскладка главного экрана: круг, календарь и легенда целиком
+/// помещаются на экран без прокрутки — размеры подбираются под телефон.
+class _HomeLayout {
+  final double circle;
+  final double circleTop;
+  final double headerH;
+  final double cellH;
+  final double bottomSpace;
+  const _HomeLayout(
+      {required this.circle,
+      required this.circleTop,
+      required this.headerH,
+      required this.cellH,
+      required this.bottomSpace});
+
+  static const legendH = 20.0;
+  static const legendGap = 6.0;
+  static const circleGap = 6.0; // между кругом и календарём
+
+  static _HomeLayout compute(
+      {required double width,
+      required double height,
+      required double top,
+      required double bottom}) {
+    // снизу: панель, системная полоска и выступ кнопки «+»
+    final bottomSpace = kBarHeight + bottom + kFabSize / 2 + 2;
+    final avail = height - top - bottomSpace - legendGap - legendH;
+    final cellW = (width - 12) / 7;
+    final maxCircle = math.min(width * 0.68, 300.0);
+    final minCircle = math.min(width * 0.5, 210.0);
+    var cellH = math.min(cellW * 0.8, 46.0);
+    double circleFor(double ch) =>
+        avail - 8 - circleGap - MonthCalendar.heightFor(ch);
+    // если не помещается — сначала ужимаем строки календаря
+    while (circleFor(cellH) < minCircle && cellH > 34) {
+      cellH -= 1;
+    }
+    // если места много — строки чуть выше, но в разумных пределах
+    while (circleFor(cellH) > maxCircle && cellH < math.min(cellW * 0.9, 52)) {
+      cellH += 1;
+    }
+    final room = circleFor(cellH);
+    final circle = room.clamp(150.0, maxCircle).toDouble();
+    // оставшийся воздух делим поровну сверху и под кругом
+    final spare = math.max(0.0, room - circle);
+    final circleTop = 8 + spare / 2;
+    final headerH = top + circleTop + circle + circleGap + spare / 2;
+    return _HomeLayout(
+      circle: circle,
+      circleTop: circleTop,
+      headerH: headerH,
+      cellH: cellH,
+      bottomSpace: bottomSpace,
     );
   }
 }
@@ -187,14 +252,14 @@ class _RoundButton extends StatelessWidget {
       child: Pressable(
         onTap: onTap,
         child: Container(
-          width: 52,
-          height: 52,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: theme.scaffoldBackgroundColor.withValues(alpha: 0.75),
             border: Border.all(color: AppColors.of(context).cardBorder),
           ),
-          child: Icon(icon, color: theme.colorScheme.primary, size: 28),
+          child: Icon(icon, color: theme.colorScheme.primary, size: 22),
         ),
       ),
     );
@@ -243,8 +308,8 @@ class _SyncBadgeState extends State<_SyncBadge>
                 }
               },
         child: Container(
-          width: 52,
-          height: 52,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: theme.scaffoldBackgroundColor.withValues(alpha: 0.75),
@@ -271,7 +336,7 @@ class _Legend extends StatelessWidget {
   Widget build(BuildContext context) {
     final b = Theme.of(context).brightness;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: FittedBox(
         fit: BoxFit.scaleDown,
         child: Row(

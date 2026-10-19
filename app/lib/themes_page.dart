@@ -18,7 +18,7 @@ class ThemesPage extends StatelessWidget {
         child: ListenableBuilder(
           listenable: store,
           builder: (context, _) => ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
             children: [
               Center(child: Text('Темы', style: theme.appBarTheme.titleTextStyle)),
               const SizedBox(height: 12),

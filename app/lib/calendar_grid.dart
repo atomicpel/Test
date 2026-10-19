@@ -10,14 +10,21 @@ import 'ui_common.dart';
 class MonthCalendar extends StatefulWidget {
   final Store store;
   final void Function(DateTime) onDayTap;
-  const MonthCalendar({super.key, required this.store, required this.onDayTap});
+  /// Высота строки календаря — подбирается так, чтобы всё влезло в экран.
+  final double cellH;
+  const MonthCalendar(
+      {super.key, required this.store, required this.onDayTap, this.cellH = 46});
+
+  /// Высота всего календаря (заголовок, дни недели и 6 строк).
+  static double heightFor(double cellH) => _titleH + 6 + _weekH + 4 + 6 * cellH;
 
   @override
   State<MonthCalendar> createState() => _MonthCalendarState();
 }
 
 const _base = 1200;
-const _cellH = 52.0;
+const _titleH = 38.0;
+const _weekH = 18.0;
 
 class _MonthCalendarState extends State<MonthCalendar> {
   final _pages = PageController(initialPage: _base);
@@ -43,12 +50,18 @@ class _MonthCalendarState extends State<MonthCalendar> {
     final accent = theme.colorScheme.primary;
     final m = _monthOf(_page);
     final c = AppColors.of(context);
-    return Column(children: [
-      Row(children: [
+    final cellH = widget.cellH;
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.15,
+      child: Column(children: [
+      SizedBox(
+        height: _titleH,
+        child: Row(children: [
         IconButton(
             tooltip: 'Предыдущий месяц',
+            visualDensity: VisualDensity.compact,
             onPressed: () => _go(_page - 1),
-            icon: Icon(Icons.chevron_left, color: accent, size: 34)),
+            icon: Icon(Icons.chevron_left, color: accent, size: 28)),
         Expanded(
           child: GestureDetector(
             onTap: () => _go(_base),
@@ -66,7 +79,7 @@ class _MonthCalendarState extends State<MonthCalendar> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontFamily: kFont,
-                    fontSize: 25,
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: accent),
               ),
@@ -75,26 +88,31 @@ class _MonthCalendarState extends State<MonthCalendar> {
         ),
         IconButton(
             tooltip: 'Следующий месяц',
+            visualDensity: VisualDensity.compact,
             onPressed: () => _go(_page + 1),
-            icon: Icon(Icons.chevron_right, color: accent, size: 34)),
+            icon: Icon(Icons.chevron_right, color: accent, size: 28)),
       ]),
-      const SizedBox(height: 14),
-      Row(children: [
+      ),
+      const SizedBox(height: 6),
+      SizedBox(
+        height: _weekH,
+        child: Row(children: [
         for (var i = 0; i < 7; i++)
           Expanded(
             child: Center(
               child: Text(weekdaysShort[i],
                   style: TextStyle(
                       fontFamily: kFont,
-                      fontSize: 14,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                       color: c.muted)),
             ),
           ),
       ]),
-      const SizedBox(height: 8),
+      ),
+      const SizedBox(height: 4),
       SizedBox(
-        height: 6 * _cellH,
+        height: 6 * cellH,
         child: PageView.builder(
           controller: _pages,
           onPageChanged: (p) {
@@ -106,10 +124,12 @@ class _MonthCalendarState extends State<MonthCalendar> {
             month: _monthOf(p),
             store: widget.store,
             onTap: widget.onDayTap,
+            cellH: cellH,
           ),
         ),
       ),
-    ]);
+    ]),
+    );
   }
 }
 
@@ -126,8 +146,13 @@ class _MonthGrid extends StatelessWidget {
   final DateTime month;
   final Store store;
   final void Function(DateTime) onTap;
+  final double cellH;
   const _MonthGrid(
-      {super.key, required this.month, required this.store, required this.onTap});
+      {super.key,
+      required this.month,
+      required this.store,
+      required this.onTap,
+      required this.cellH});
 
   @override
   Widget build(BuildContext context) {
@@ -161,6 +186,7 @@ class _MonthGrid extends StatelessWidget {
             progress: prog,
             onTap: onTap,
             preg: preg,
+            cellH: cellH,
           ),
       ]),
     );
@@ -179,8 +205,10 @@ class _WeekRow extends StatelessWidget {
   final double progress;
   final void Function(DateTime) onTap;
   final bool preg;
+  final double cellH;
 
   const _WeekRow({
+    required this.cellH,
     required this.days,
     required this.month,
     required this.groups,
@@ -194,6 +222,8 @@ class _WeekRow extends StatelessWidget {
     required this.preg,
   });
 
+  double get _mark => cellH * 0.84;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -202,7 +232,7 @@ class _WeekRow extends StatelessWidget {
     final showIntim = store.calShow('intimacy');
     final showPill = store.calShow('pill');
     return SizedBox(
-      height: _cellH,
+      height: cellH,
       child: CustomPaint(
         painter: _CapsulePainter(
           groups: groups,
@@ -214,6 +244,7 @@ class _WeekRow extends StatelessWidget {
           nextGroup: nextGroup,
           progress: progress,
           ovColor: Palette.ovulation(b),
+          h: _mark,
         ),
         child: Row(children: [
           for (var i = 0; i < 7; i++)
@@ -248,7 +279,7 @@ class _WeekRow extends StatelessWidget {
       label: '${d.day} ${monthsGen[d.month - 1]}${isToday ? ', сегодня' : ''}',
       excludeSemantics: true,
       child: InkResponse(
-        radius: 26,
+        radius: cellH * 0.5,
         onTap: () {
           HapticFeedback.selectionClick();
           onTap(d);
@@ -261,8 +292,8 @@ class _WeekRow extends StatelessWidget {
           if (isToday)
             AnimatedContainer(
               duration: motion(context, 300),
-              width: 44,
-              height: 44,
+              width: _mark,
+              height: _mark,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: grp == _Grp.period ? Colors.transparent : Palette.today,
@@ -274,13 +305,13 @@ class _WeekRow extends StatelessWidget {
           Text('${d.day}',
               style: TextStyle(
                 fontFamily: kFont,
-                fontSize: 19,
+                fontSize: (cellH * 0.37).clamp(13.0, 18.0),
                 fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
                 color: isToday && grp != _Grp.period ? Colors.white : textColor,
               )),
           if (markers.isNotEmpty)
             Positioned(
-              bottom: 5,
+              bottom: cellH * 0.07,
               child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -306,8 +337,10 @@ class _CapsulePainter extends CustomPainter {
   final _Grp nextGroup;
   final double progress;
   final Color ovColor;
+  final double h;
 
   _CapsulePainter({
+    required this.h,
     required this.groups,
     required this.ovulation,
     required this.prevGroup,
@@ -319,7 +352,6 @@ class _CapsulePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cw = size.width / 7;
-    const h = 44.0;
     final top = (size.height - h) / 2;
     var i = 0;
     while (i < 7) {
@@ -377,6 +409,7 @@ class _CapsulePainter extends CustomPainter {
   @override
   bool shouldRepaint(_CapsulePainter o) =>
       o.progress != progress ||
+      o.h != h ||
       o.prevGroup != prevGroup ||
       o.nextGroup != nextGroup ||
       o.ovColor != ovColor ||

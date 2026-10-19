@@ -37,6 +37,10 @@ String daysWord(int n) => '$n ${plural(n, 'день', 'дня', 'дней')}';
 /// Шрифт приложения — Nunito (мягкий, округлый).
 const kFont = 'Nunito';
 
+/// Нижняя панель и кнопка «+» — от них считается место на экранах.
+const kBarHeight = 54.0;
+const kFabSize = 56.0;
+
 /// Смысловые цвета календаря — одинаковые во всех темах.
 class Palette {
   static const period = Color(0xFFC24D76); // отмеченные месячные
@@ -179,16 +183,29 @@ ThemeData buildTheme(Brightness b, AppThemeSpec spec) {
   final text = t.copyWith(
     displayLarge: t.displayLarge?.copyWith(
         fontWeight: FontWeight.w300, fontSize: 72, height: 1, letterSpacing: -1),
-    headlineSmall: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-    titleLarge: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 21),
-    titleMedium: t.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 17),
-    bodyLarge: t.bodyLarge?.copyWith(fontSize: 16.5, height: 1.35),
-    bodyMedium: t.bodyMedium?.copyWith(fontSize: 15, height: 1.4),
-    labelLarge: t.labelLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 16),
+    headlineSmall: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 20),
+    titleLarge: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 18),
+    titleMedium: t.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 15),
+    titleSmall: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13.5),
+    bodyLarge: t.bodyLarge?.copyWith(fontSize: 15, height: 1.3),
+    bodyMedium: t.bodyMedium?.copyWith(fontSize: 13.5, height: 1.35),
+    bodySmall: t.bodySmall?.copyWith(fontSize: 12, height: 1.3),
+    labelLarge: t.labelLarge?.copyWith(fontWeight: FontWeight.w700, fontSize: 14.5),
   );
 
   return base.copyWith(
     textTheme: text,
+    // плотнее по умолчанию: меньше отступов у списков, кнопок, полей
+    visualDensity: const VisualDensity(horizontal: -1, vertical: -2),
+    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    listTileTheme: ListTileThemeData(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      minVerticalPadding: 6,
+      titleTextStyle: TextStyle(
+          fontFamily: kFont, fontSize: 15, fontWeight: FontWeight.w600, color: fg),
+      subtitleTextStyle: TextStyle(fontFamily: kFont, fontSize: 12.5, color: muted),
+    ),
+    dividerTheme: DividerThemeData(color: border, space: 1, thickness: 1),
     extensions: [
       AppColors(card, border, muted, dark ? spec.headerDark : spec.headerLight)
     ],
@@ -198,8 +215,9 @@ ThemeData buildTheme(Brightness b, AppThemeSpec spec) {
       surfaceTintColor: Colors.transparent,
       scrolledUnderElevation: 0,
       centerTitle: false,
+      toolbarHeight: 50,
       titleTextStyle: TextStyle(
-          fontFamily: kFont, fontSize: 22, fontWeight: FontWeight.w700, color: fg),
+          fontFamily: kFont, fontSize: 19, fontWeight: FontWeight.w700, color: fg),
     ),
     cardTheme: CardThemeData(
       elevation: 0,
@@ -214,20 +232,20 @@ ThemeData buildTheme(Brightness b, AppThemeSpec spec) {
       style: FilledButton.styleFrom(
         backgroundColor: accent,
         foregroundColor: onAccent,
-        minimumSize: const Size(64, 54),
+        minimumSize: const Size(64, 46),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         textStyle: const TextStyle(
-            fontFamily: kFont, fontSize: 17, fontWeight: FontWeight.w700),
+            fontFamily: kFont, fontSize: 15, fontWeight: FontWeight.w700),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: fg,
-        minimumSize: const Size(64, 54),
+        minimumSize: const Size(64, 46),
         side: BorderSide(color: border),
         textStyle: const TextStyle(
-            fontFamily: kFont, fontSize: 17, fontWeight: FontWeight.w700),
+            fontFamily: kFont, fontSize: 15, fontWeight: FontWeight.w700),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
@@ -235,7 +253,7 @@ ThemeData buildTheme(Brightness b, AppThemeSpec spec) {
       style: TextButton.styleFrom(
         foregroundColor: accent,
         textStyle: const TextStyle(
-            fontFamily: kFont, fontSize: 16, fontWeight: FontWeight.w700),
+            fontFamily: kFont, fontSize: 14.5, fontWeight: FontWeight.w700),
       ),
     ),
     switchTheme: SwitchThemeData(
@@ -286,7 +304,7 @@ ThemeData buildTheme(Brightness b, AppThemeSpec spec) {
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       titleTextStyle: TextStyle(
-          fontFamily: kFont, fontSize: 21, fontWeight: FontWeight.w700, color: fg),
+          fontFamily: kFont, fontSize: 18, fontWeight: FontWeight.w700, color: fg),
     ),
     datePickerTheme: DatePickerThemeData(
       backgroundColor: card,

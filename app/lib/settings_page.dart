@@ -83,7 +83,7 @@ class SettingsPage extends StatelessWidget {
               ),
             ];
             return ListView(
-              padding: const EdgeInsets.fromLTRB(0, 12, 0, 120),
+              padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
               children: [
                 for (var i = 0; i < tiles.length; i++) Stagger(index: i, child: tiles[i]),
               ],
@@ -145,13 +145,13 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 30, 20, 6),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 2),
       child: Row(children: [
-        Icon(icon, color: accent, size: 24),
-        const SizedBox(width: 12),
+        Icon(icon, color: accent, size: 19),
+        const SizedBox(width: 10),
         Text(title,
             style: TextStyle(
-                fontFamily: kFont, fontSize: 18, fontWeight: FontWeight.w700, color: accent)),
+                fontFamily: kFont, fontSize: 15, fontWeight: FontWeight.w700, color: accent)),
       ]),
     );
   }
@@ -169,14 +169,13 @@ class _Tile extends StatelessWidget {
     final theme = Theme.of(context);
     return Column(children: [
       ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
         title: Text(title,
             style: danger ? TextStyle(color: theme.colorScheme.error) : null),
         subtitle: subtitle == null ? null : Text(subtitle!),
-        trailing: Icon(Icons.chevron_right, color: theme.colorScheme.primary),
+        trailing: Icon(Icons.chevron_right, color: theme.colorScheme.primary, size: 20),
         onTap: onTap,
       ),
-      Divider(color: AppColors.of(context).cardBorder, indent: 20),
+      Divider(height: 1, color: AppColors.of(context).cardBorder, indent: 16),
     ]);
   }
 }
@@ -274,7 +273,7 @@ class ContraceptionPage extends StatelessWidget {
       store: store,
       children: (context) => [
         SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           title: const Text('Отслеживать контрацепцию'),
           value: store.contraception != null,
           onChanged: (v) => store.setSetting('contra', v ? 'pill' : null),
@@ -283,7 +282,7 @@ class ContraceptionPage extends StatelessWidget {
           _note(context, 'Метод контрацепции'),
           for (final o in contraceptionMethods)
             RadioListTile<String>(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               value: o.id,
               groupValue: store.contraception,
               onChanged: (v) => store.setSetting('contra', v),
@@ -291,7 +290,7 @@ class ContraceptionPage extends StatelessWidget {
             ),
           if (store.pillTracking)
             ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               title: const Text('Напоминание о таблетке'),
               subtitle: Text(store.reminders['pill'] == true
                   ? 'Каждый день в ${store.reminders['pillTime']}'
@@ -321,7 +320,7 @@ class PregnancyPage extends StatelessWidget {
         final t = today();
         return [
           SwitchListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             title: const Text('Режим беременности'),
             subtitle: const Text('Вместо прогноза месячных — неделя беременности и время до родов'),
             value: p != null,
@@ -360,7 +359,7 @@ class PregnancyPage extends StatelessWidget {
               ),
             ),
           SwitchListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             title: const Text('Уведомление о задержке'),
             subtitle: Text(
                 'Если задержка больше ${store.reminders['delayDays']} дней'),
@@ -382,7 +381,7 @@ class CalendarStylePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget sw(String key, String title, String sub) => SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           title: Text(title),
           subtitle: Text(sub),
           value: store.calShow(key),
@@ -636,7 +635,7 @@ class FontSizePage extends StatelessWidget {
             'Меняет размер текста во всём приложении. Изменение видно сразу.'),
         for (final (k, label) in fontScales)
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             title: Text(label),
             trailing: AnimatedSwitcher(
               duration: motion(context, 200),
@@ -756,7 +755,7 @@ class _SecurityPageState extends State<SecurityPage> {
       store: store,
       children: (context) => [
         SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           title: const Text('PIN-код'),
           subtitle: const Text('Спрашивать PIN при входе в приложение'),
           value: pinEnabled(store),
@@ -773,7 +772,7 @@ class _SecurityPageState extends State<SecurityPage> {
           },
         ),
         SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
           title: const Text('Отпечаток пальца или лицо'),
           subtitle: Text(_bioAvail
               ? 'Вместо PIN, если устройство поддерживает'

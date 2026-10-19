@@ -3,6 +3,7 @@
 // Картинки попадают в screenshot_test/out/ и прикладываются к релизу.
 import 'dart:io';
 
+import 'package:cycle_app/home_page.dart';
 import 'package:cycle_app/lock.dart';
 import 'package:cycle_app/main.dart';
 import 'package:cycle_app/prefs.dart';
@@ -21,9 +22,13 @@ Future<void> _font(String family, List<String> files) async {
   await l.load();
 }
 
-Future<void> _phone(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(1080, 2340);
-  tester.view.devicePixelRatio = 2.625;
+Future<void> _phone(WidgetTester tester,
+    {Size size = const Size(1080, 2340), double dpr = 2.625}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = dpr;
+  // строка состояния сверху и кнопки навигации снизу, как на телефоне
+  tester.view.padding = FakeViewPadding(top: 32 * dpr, bottom: 48 * dpr);
+  tester.view.viewPadding = FakeViewPadding(top: 32 * dpr, bottom: 48 * dpr);
   addTearDown(tester.view.reset);
 }
 
@@ -47,6 +52,15 @@ Future<void> _finish(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Пишет в журнал, можно ли прокрутить главный экран (должно быть 0).
+void _homeScroll(WidgetTester tester, String name) {
+  final f = find.descendant(
+      of: find.byType(HomePage), matching: find.byType(Scrollable));
+  final st = tester.state<ScrollableState>(f.first);
+  // ignore: avoid_print
+  print('HOME_SCROLL $name: ${st.position.maxScrollExtent.toStringAsFixed(1)}');
+}
+
 Finder _sem(String label) => find.byWidgetPredicate(
     (w) => w is Semantics && w.properties.label == label);
 
@@ -67,6 +81,7 @@ void main() {
     await tester.pumpWidget(CycleApp(store: sampleStore(), darkOverride: true, themeOverride: 'cats'));
     await _images(tester);
     await _shot(tester, '01_home_dark');
+    _homeScroll(tester, '01');
     await tester.drag(find.byType(ListView).first, const Offset(0, -480));
     await _shot(tester, '02_home_scrolled');
     await tester.drag(find.byType(PageView).first, const Offset(-400, 0));
@@ -84,6 +99,7 @@ void main() {
     await tester.pumpWidget(CycleApp(store: sampleStore(), darkOverride: false, themeOverride: 'flowers'));
     await _images(tester);
     await _shot(tester, '06_home_light_flowers');
+    _homeScroll(tester, '06');
     await _finish(tester);
   });
 
@@ -135,6 +151,26 @@ void main() {
     setPin(s, '1234');
     await tester.pumpWidget(CycleApp(store: s, darkOverride: true));
     await _shot(tester, '16_pin');
+    await _finish(tester);
+  });
+
+  testWidgets('главный экран — крупный шрифт телефона', (tester) async {
+    await _phone(tester);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(CycleApp(store: sampleStore(), darkOverride: true, themeOverride: 'cats'));
+    await _images(tester);
+    await _shot(tester, '17_home_big_font');
+    _homeScroll(tester, '17');
+    await _finish(tester);
+  });
+
+  testWidgets('главный экран — маленький телефон', (tester) async {
+    await _phone(tester, size: const Size(720, 1520), dpr: 2.0);
+    await tester.pumpWidget(CycleApp(store: sampleStore(), darkOverride: true, themeOverride: 'cats'));
+    await _images(tester);
+    await _shot(tester, '18_home_small_phone');
+    _homeScroll(tester, '18');
     await _finish(tester);
   });
 }

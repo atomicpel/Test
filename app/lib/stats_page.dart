@@ -270,11 +270,11 @@ class _CyclesTabState extends State<_CyclesTab>
           ));
         }
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 96),
           children: [
             for (var i = 0; i < cards.length; i++)
               Padding(
-                padding: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: Stagger(index: i, child: cards[i]),
               ),
           ],
@@ -296,7 +296,7 @@ class _SmallCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AppCard(
-      padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
@@ -509,11 +509,11 @@ class _ChartsTab extends StatelessWidget {
                 ),
         ];
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 96),
           children: [
             for (var i = 0; i < cards.length; i++)
               Padding(
-                padding: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.only(bottom: 10),
                 child: Stagger(index: i, child: cards[i]),
               ),
           ],
@@ -622,12 +622,12 @@ class _TimelineTab extends StatelessWidget {
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 96),
           itemCount: days.length,
           itemBuilder: (context, i) => Stagger(
             index: i,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 10),
               child: _TimelineCard(
                   store: store,
                   day: days[i].key,
@@ -707,7 +707,7 @@ class _TimelineCard extends StatelessWidget {
 
     return AppCard(
       onTap: onTap,
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       child: IntrinsicHeight(
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(

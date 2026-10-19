@@ -379,16 +379,16 @@ class _FabState extends State<_Fab> {
           duration: motion(context, 180),
           curve: Curves.easeOutBack,
           child: Container(
-            width: 76,
-            height: 76,
+            width: kFabSize,
+            height: kFabSize,
             decoration: BoxDecoration(
               color: theme.colorScheme.primary,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
                     color: theme.colorScheme.primary.withValues(alpha: 0.4),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6)),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4)),
               ],
             ),
             child: AnimatedRotation(
@@ -396,7 +396,7 @@ class _FabState extends State<_Fab> {
               duration: motion(context, 400),
               curve: Curves.easeOutBack,
               child:
-                  Icon(Icons.add, size: 44, color: theme.colorScheme.onPrimary),
+                  Icon(Icons.add, size: 32, color: theme.colorScheme.onPrimary),
             ),
           ),
         ),
@@ -434,15 +434,18 @@ class _BottomBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: 70,
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.1,
+          child: SizedBox(
+          height: kBarHeight,
           child: Row(children: [
             item(0),
             item(1),
-            const SizedBox(width: 84),
+            const SizedBox(width: kFabSize + 12),
             item(2),
             item(3),
           ]),
+          ),
         ),
       ),
     );
@@ -472,24 +475,24 @@ class _NavItem extends StatelessWidget {
       excludeSemantics: true,
       child: InkResponse(
         onTap: onTap,
-        radius: 40,
+        radius: 32,
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           AnimatedScale(
-            scale: selected ? 1.15 : 1,
+            scale: selected ? 1.12 : 1,
             duration: motion(context, 300),
             curve: Curves.easeOutBack,
             child: TweenAnimationBuilder<Color?>(
               tween: ColorTween(end: color),
               duration: motion(context, 250),
-              builder: (context, c, _) => Icon(icon, color: c, size: 30),
+              builder: (context, c, _) => Icon(icon, color: c, size: 23),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           AnimatedDefaultTextStyle(
             duration: motion(context, 250),
             style: TextStyle(
                 fontFamily: kFont,
-                fontSize: 13.5,
+                fontSize: 11,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                 color: color),
             child: Text(label,
