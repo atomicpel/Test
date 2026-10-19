@@ -15,7 +15,11 @@ if [[ "${1:-}" == "--code" ]]; then
 fi
 
 DOMAIN="${1:-}"
-PORT=8095
+PORT_FROM=8095          # с какого порта искать свободный
+ENV_FILE=/etc/cycle-sync.env
+CADDYFILE=/etc/caddy/Caddyfile
+MARK_BEGIN="# >>> cycle-sync (Мой цикл) — блок управляется install-cycle-server.sh"
+MARK_END="# <<< cycle-sync"
 APP_DIR=/opt/cycle-sync
 DATA_DIR=/var/lib/cycle-sync
 
@@ -23,6 +27,47 @@ if [[ -z "$DOMAIN" ]]; then
   echo "Укажите домен: sudo bash install-cycle-server.sh cycle.example.com"; exit 1
 fi
 if [[ $EUID -ne 0 ]]; then echo "Запустите через sudo"; exit 1; fi
+
+# ---------- проверки до каких-либо изменений
+command -v caddy >/dev/null 2>&1 || { echo "!!! Не найден caddy"; exit 1; }
+[[ -f "$CADDYFILE" ]] || { echo "!!! Не найден $CADDYFILE"; exit 1; }
+systemctl is-active --quiet caddy || { echo "!!! Служба caddy не запущена"; exit 1; }
+
+# кто держит 80/443 — должен быть Caddy
+for p in 80 443; do
+  owner=$(ss -Hltnp "sport = :$p" 2>/dev/null | grep -o 'users:(("[^"]*' | head -1 | cut -d'"' -f2 || true)
+  if [[ -n "$owner" && "$owner" != "caddy" ]]; then
+    echo "!!! Порт $p занят процессом «$owner», а не Caddy — сертификат может не выдаться."
+  fi
+done
+
+# домен не должен уже обслуживаться другим сайтом в Caddyfile
+CADDY_OTHER=$(sed "/^$MARK_BEGIN/,/^$MARK_END/d" "$CADDYFILE")
+DOMAIN_RE=${DOMAIN//./\\.}
+if grep -qE "(^|[[:space:],/])${DOMAIN_RE}([[:space:],:{]|$)" <<<"$CADDY_OTHER"; then
+  echo "!!! $DOMAIN уже есть в $CADDYFILE у другого сайта. Выберите другой поддомен."
+  exit 1
+fi
+
+# порт: занят ли кем-то, кроме нашей службы, или упомянут в чужих блоках Caddy
+port_taken() {
+  local port=$1
+  ss -Hltn "sport = :$port" 2>/dev/null | grep -q . && return 0
+  grep -qE ":$port([^0-9]|$)" <<<"$CADDY_OTHER" && return 0
+  return 1
+}
+OLD_PORT=$(grep -s '^CYCLE_PORT=' "$ENV_FILE" | cut -d= -f2- || true)
+systemctl stop cycle-sync 2>/dev/null || true   # чтобы свой же порт не считался занятым
+PORT=""
+for cand in $OLD_PORT $(seq $PORT_FROM $((PORT_FROM + 100))); do
+  if port_taken "$cand"; then
+    echo "Порт $cand занят — пропускаю"
+  else
+    PORT=$cand; break
+  fi
+done
+[[ -n "$PORT" ]] || { echo "!!! Не нашёл свободный порт"; exit 1; }
+echo "Порт сервера синхронизации: 127.0.0.1:$PORT"
 
 apt-get update -qq
 apt-get install -y -qq python3-venv curl
@@ -146,12 +191,13 @@ python3 -m venv "$APP_DIR/venv"
 "$APP_DIR/venv/bin/pip" install -q -r "$APP_DIR/requirements.txt"
 
 # Токен создаётся один раз и сохраняется
-ENV_FILE=/etc/cycle-sync.env
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "CYCLE_TOKEN=$(python3 -c 'import secrets;print(secrets.token_urlsafe(32))')" > "$ENV_FILE"
   echo "CYCLE_DB=$DATA_DIR/cycle.db" >> "$ENV_FILE"
   chmod 600 "$ENV_FILE"
 fi
+sed -i '/^CYCLE_PORT=/d' "$ENV_FILE"
+echo "CYCLE_PORT=$PORT" >> "$ENV_FILE"
 
 cat > /etc/systemd/system/cycle-sync.service <<EOF
 [Unit]
@@ -175,9 +221,14 @@ systemctl daemon-reload
 systemctl enable --now cycle-sync
 systemctl restart cycle-sync
 
-# ---------- Caddy: добавляем блок для домена
-CADDYFILE=/etc/caddy/Caddyfile
-BLOCK="# «Мой цикл» — сервер синхронизации
+# ---------- Caddy: свой блок между метками (повторный запуск его заменяет)
+BAK="$CADDYFILE.bak-$(date +%Y%m%d-%H%M%S)"
+cp -p "$CADDYFILE" "$BAK"
+{
+  sed "/^$MARK_BEGIN/,/^$MARK_END/d" "$BAK"
+  cat <<EOF
+
+$MARK_BEGIN
 $DOMAIN {
 	encode gzip
 	request_body {
@@ -189,28 +240,20 @@ $DOMAIN {
 	handle {
 		respond 404
 	}
-}"
-if [[ -f "$CADDYFILE" ]] && command -v caddy >/dev/null 2>&1; then
-  if grep -qE "^[[:space:]]*$DOMAIN[[:space:]]*\{" "$CADDYFILE"; then
-    echo "В $CADDYFILE уже есть блок для $DOMAIN — не трогаю."
-  else
-    BAK="$CADDYFILE.bak-$(date +%Y%m%d-%H%M%S)"
-    cp "$CADDYFILE" "$BAK"
-    printf '\n%s\n' "$BLOCK" >> "$CADDYFILE"
-    if caddy validate --adapter caddyfile --config "$CADDYFILE" >/dev/null 2>&1; then
-      systemctl reload caddy
-      echo "Caddy: добавлен $DOMAIN (резервная копия: $BAK)"
-    else
-      cp "$BAK" "$CADDYFILE"
-      echo "!!! Caddy не принял новую конфигурацию, файл возвращён как был."
-      echo "    Добавьте блок вручную:"; echo; echo "$BLOCK"; echo
-    fi
-  fi
+}
+$MARK_END
+EOF
+} > "$CADDYFILE.new"
+if caddy validate --adapter caddyfile --config "$CADDYFILE.new" >/dev/null 2>&1; then
+  cat "$CADDYFILE.new" > "$CADDYFILE"     # права и владелец файла сохраняются
+  rm -f "$CADDYFILE.new"
+  systemctl reload caddy
+  echo "Caddy: $DOMAIN -> 127.0.0.1:$PORT (резервная копия: $BAK)"
 else
-  echo "!!! Не нашёл $CADDYFILE (Caddy в Docker или в другом месте)."
-  echo "    Добавьте в свой Caddyfile блок и перезагрузите Caddy:"; echo; echo "$BLOCK"; echo
-  echo "    Если Caddy в контейнере, вместо 127.0.0.1 укажите host.docker.internal"
-  echo "    или IP хоста в docker-сети, а в cycle-sync.service — --host 0.0.0.0."
+  echo "!!! Caddy не принял конфигурацию, $CADDYFILE не изменён. Ошибка:"
+  caddy validate --adapter caddyfile --config "$CADDYFILE.new" 2>&1 | tail -5
+  rm -f "$CADDYFILE.new"
+  exit 1
 fi
 
 # Caddy получает сертификат за несколько секунд
@@ -225,6 +268,7 @@ TOKEN=$(grep '^CYCLE_TOKEN=' "$ENV_FILE" | cut -d= -f2-)
 SCHEME=https
 curl -fsS "https://$DOMAIN/api/health" >/dev/null 2>&1 || SCHEME=http
 echo "=============================================="
+echo " Сервер: 127.0.0.1:$PORT (служба cycle-sync), сайт: $DOMAIN через Caddy"
 echo " Проверка: curl $SCHEME://$DOMAIN/api/health"
 curl -fsS "$SCHEME://$DOMAIN/api/health" && echo
 echo
