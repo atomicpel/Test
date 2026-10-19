@@ -30,8 +30,16 @@ df -h / >> "$SETUP" 2>&1
 ls "$SDK/system-images/android-34/google_apis/x86_64" >> "$SETUP" 2>&1
 
 log "создание AVD"
+# avdmanager и эмулятор могут искать AVD в разных папках
+# (XDG_CONFIG_HOME на раннерах GitHub) — задаём одну явно.
+export ANDROID_AVD_HOME="$HOME/.android/avd"
+export ANDROID_USER_HOME="$HOME/.android"
+mkdir -p "$ANDROID_AVD_HOME"
 echo no | "$BIN/avdmanager" create avd -n smoke -k "$IMG" -d pixel_6 --force >> "$SETUP" 2>&1
 log "avdmanager код $?"
+INI="$(find "$HOME" -name smoke.ini 2>/dev/null | head -1)"
+log "AVD: $INI"
+[ -n "$INI" ] && export ANDROID_AVD_HOME="$(dirname "$INI")"
 "$SDK/emulator/emulator" -list-avds >> "$SETUP" 2>&1
 
 log "запуск эмулятора"
