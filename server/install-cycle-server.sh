@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Установка сервера синхронизации «Мой цикл» на Ubuntu (VPS).
+# Установка сервера синхронизации «Мой цикл» на Ubuntu (VPS) с Caddy.
 # Запуск:  sudo bash install-cycle-server.sh cycle.atomicpel.cloud-ip.cc
 # Файл самодостаточный: код сервера встроен внутрь. Повторный запуск
 # обновляет сервер, токен и данные сохраняются.
-# Домен должен уже указывать на этот сервер.
+# Домен должен уже указывать на этот сервер. HTTPS-сертификат получает
+# уже работающий Caddy — nginx и certbot НЕ ставятся.
+# В Caddyfile добавляется один блок для домена (с резервной копией и
+# проверкой конфигурации перед перезагрузкой; остальные сайты не трогаются).
 set -euo pipefail
 
 if [[ "${1:-}" == "--code" ]]; then
@@ -22,7 +25,7 @@ fi
 if [[ $EUID -ne 0 ]]; then echo "Запустите через sudo"; exit 1; fi
 
 apt-get update -qq
-apt-get install -y -qq python3-venv nginx certbot python3-certbot-nginx
+apt-get install -y -qq python3-venv curl
 
 id cycle >/dev/null 2>&1 || useradd --system --home "$DATA_DIR" --shell /usr/sbin/nologin cycle
 mkdir -p "$APP_DIR" "$DATA_DIR"
@@ -168,28 +171,53 @@ ReadWritePaths=$DATA_DIR
 WantedBy=multi-user.target
 EOF
 
-cat > /etc/nginx/sites-available/cycle-sync <<EOF
-server {
-    listen 80;
-    server_name $DOMAIN;
-    client_max_body_size 5m;
-    location /api/ {
-        proxy_pass http://127.0.0.1:$PORT;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    }
-    location / { return 404; }
-}
-EOF
-ln -sf /etc/nginx/sites-available/cycle-sync /etc/nginx/sites-enabled/cycle-sync
-
 systemctl daemon-reload
 systemctl enable --now cycle-sync
 systemctl restart cycle-sync
-nginx -t && systemctl reload nginx
 
-certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect || \
-  echo "!!! certbot не смог получить сертификат — проверьте, что $DOMAIN указывает на этот сервер, и запустите: certbot --nginx -d $DOMAIN"
+# ---------- Caddy: добавляем блок для домена
+CADDYFILE=/etc/caddy/Caddyfile
+BLOCK="# «Мой цикл» — сервер синхронизации
+$DOMAIN {
+	encode gzip
+	request_body {
+		max_size 5MB
+	}
+	handle /api/* {
+		reverse_proxy 127.0.0.1:$PORT
+	}
+	handle {
+		respond 404
+	}
+}"
+if [[ -f "$CADDYFILE" ]] && command -v caddy >/dev/null 2>&1; then
+  if grep -qE "^[[:space:]]*$DOMAIN[[:space:]]*\{" "$CADDYFILE"; then
+    echo "В $CADDYFILE уже есть блок для $DOMAIN — не трогаю."
+  else
+    BAK="$CADDYFILE.bak-$(date +%Y%m%d-%H%M%S)"
+    cp "$CADDYFILE" "$BAK"
+    printf '\n%s\n' "$BLOCK" >> "$CADDYFILE"
+    if caddy validate --adapter caddyfile --config "$CADDYFILE" >/dev/null 2>&1; then
+      systemctl reload caddy
+      echo "Caddy: добавлен $DOMAIN (резервная копия: $BAK)"
+    else
+      cp "$BAK" "$CADDYFILE"
+      echo "!!! Caddy не принял новую конфигурацию, файл возвращён как был."
+      echo "    Добавьте блок вручную:"; echo; echo "$BLOCK"; echo
+    fi
+  fi
+else
+  echo "!!! Не нашёл $CADDYFILE (Caddy в Docker или в другом месте)."
+  echo "    Добавьте в свой Caddyfile блок и перезагрузите Caddy:"; echo; echo "$BLOCK"; echo
+  echo "    Если Caddy в контейнере, вместо 127.0.0.1 укажите host.docker.internal"
+  echo "    или IP хоста в docker-сети, а в cycle-sync.service — --host 0.0.0.0."
+fi
+
+# Caddy получает сертификат за несколько секунд
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  curl -fsS "https://$DOMAIN/api/health" >/dev/null 2>&1 && break
+  sleep 3
+done
 
 sleep 1
 echo
